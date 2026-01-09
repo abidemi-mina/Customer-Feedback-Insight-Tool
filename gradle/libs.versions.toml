@@ -15,7 +15,7 @@ junit = "4.13.2"
 kotlin = "2.3.0"
 kotlinx-coroutines = "1.10.2"
 ktorClientContentNegotiation = "2.3.12"
-ktorClientCore = "2.3.x"
+ktorClientCore = "2.3.12"
 ktorClientCoreVersion = "2.3.12"
 ktorSerializationKotlinxJson = "2.3.12"
 navigationCompose = "2.7.0-alpha07"
@@ -50,3 +50,4 @@ composeHotReload = { id = "org.jetbrains.compose.hot-reload", version.ref = "com
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
