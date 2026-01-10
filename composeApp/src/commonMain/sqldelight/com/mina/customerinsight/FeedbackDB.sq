@@ -1,0 +1,20 @@
+import kotlin.Boolean;
+
+CREATE TABLE FeedbackEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    senderName TEXT NOT NULL,
+    senderEmail TEXT NOT NULL,
+    content TEXT NOT NULL,
+    timestamp INTEGER NOT NULL,
+    aiAnalysis TEXT,
+isAnalyzed INTEGER AS Boolean NOT NULL DEFAULT 0);
+
+insertFeedback:
+INSERT INTO FeedbackEntity(id, senderName, senderEmail, content, timestamp)
+VALUES (?, ?, ?, ?, ?);
+
+selectAll:
+SELECT * FROM FeedbackEntity ORDER BY timestamp DESC;
+
+updateAnalysis:
+UPDATE FeedbackEntity SET aiAnalysis = ?, isAnalyzed = 1 WHERE id = ?;

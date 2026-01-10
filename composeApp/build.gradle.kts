@@ -8,8 +8,18 @@ plugins {
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.composeHotReload)
     alias(libs.plugins.kotlinSerialization)
+    alias(libs.plugins.sqldelight) // The plugin must be applied
 }
+sqldelight {
+    databases {
+        create("FeedbackDB") {
+            // This MUST match the package name in your .sq file
+            packageName.set("com.mina.customerinsight")
+            srcDirs.from("src/commonMain/sqldelight")
 
+        }
+    }
+}
 kotlin {
     androidTarget {
         compilerOptions {
@@ -25,6 +35,9 @@ kotlin {
             implementation(libs.androidx.activity.compose)
             // The Android-specific "engine" for Ktor
             implementation(libs.ktor.client.okhttp)
+            implementation(libs.runtime)
+            implementation(libs.sqldelight.android.driver)
+
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -41,9 +54,15 @@ kotlin {
             // To handle JSON (for the AI API response)
             implementation(libs.ktor.client.content.negotiation.v2312)
             implementation(libs.ktor.serialization.kotlinx.json.v2312)
+            implementation(libs.ktor.client.logging)
+
 
             // The Logging plugin (helpful for debugging your AI calls)
             implementation(libs.ktor.client.logging)
+            implementation(libs.sqldelight.runtime)
+            implementation(libs.sqldelight.coroutines)
+            implementation(libs.ktor.client.cio)
+
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -53,9 +72,13 @@ kotlin {
             implementation(libs.kotlinx.coroutinesSwing)
             // The Desktop-specific "engine" (usually CIO or Apache)
             implementation(libs.ktor.client.cio)
+            implementation(libs.sqldelight.sqlite.driver)
         }
     }
 }
+
+
+
 
 android {
     namespace = "com.mina.customerinsight"

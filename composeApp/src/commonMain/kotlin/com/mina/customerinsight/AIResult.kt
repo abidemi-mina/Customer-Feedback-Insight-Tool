@@ -1,6 +1,27 @@
 package com.mina.customerinsight
 
-import kotlinx.serialization.Serializable
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 
-@Serializable
-data class AIResult(val sentiment: String, val keyPoints: List<String>)
+@Composable
+fun AIResultView(analysis: String) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
+        ),
+        modifier = Modifier.padding(top = 8.dp).fillMaxWidth()
+    ) {
+        Column(Modifier.padding(12.dp)) {
+            Text(
+                "Gemini Analysis",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(analysis, style = MaterialTheme.typography.bodyMedium)
+        }
+    }
+}

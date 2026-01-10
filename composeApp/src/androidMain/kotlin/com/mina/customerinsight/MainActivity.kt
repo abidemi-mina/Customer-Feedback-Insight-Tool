@@ -9,17 +9,13 @@ import androidx.compose.ui.tooling.preview.Preview
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
+        val driverFactory = AndroidDatabaseDriverFactory(applicationContext)
+
         setContent {
-            App()
+            App(driverFactory) // Passing the Android factory
         }
     }
 }
 
-@Preview
-@Composable
-fun AppAndroidPreview() {
-    App()
-}
