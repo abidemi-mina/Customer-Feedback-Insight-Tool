@@ -121,3 +121,7 @@ compose.desktop {
         }
     }
 }
+
+dependencies {
+    debugImplementation(compose.uiTooling)
+}
