@@ -89,6 +89,8 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
+    // Move packaging configuration here
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
