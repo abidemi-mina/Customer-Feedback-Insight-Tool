@@ -6,9 +6,38 @@ CREATE TABLE FeedbackEntity (
     senderEmail TEXT NOT NULL,
     content TEXT NOT NULL,
     timestamp INTEGER NOT NULL,
-    aiAnalysis TEXT,
-isAnalyzed INTEGER AS Boolean NOT NULL DEFAULT 0);
+    aiAnalysis TEXT,  -- NULLABLE (has ? in Kotlin)
+    isAnalyzed INTEGER  NOT NULL DEFAULT 0,  -- NON-NULLABLE
+    hasReply INTEGER  DEFAULT NULL  -- NULLABLE
+);
 
+CREATE TABLE AdminEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    email TEXT NOT NULL UNIQUE,
+    hashedPassword TEXT NOT NULL,
+    businessProfileId TEXT,
+    createdAt INTEGER NOT NULL
+);
+
+CREATE TABLE BusinessProfileEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    adminId TEXT NOT NULL,
+    businessName TEXT NOT NULL,
+    businessType TEXT NOT NULL,
+    description TEXT,
+    categories TEXT,
+    createdAt INTEGER NOT NULL
+);
+
+CREATE TABLE FeedbackReplyEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    feedbackId TEXT NOT NULL,
+    adminId TEXT NOT NULL,
+    message TEXT NOT NULL,
+    timestamp INTEGER NOT NULL
+);
+
+-- Queries for FeedbackEntity
 insertFeedback:
 INSERT INTO FeedbackEntity(id, senderName, senderEmail, content, timestamp)
 VALUES (?, ?, ?, ?, ?);
@@ -17,4 +46,48 @@ selectAll:
 SELECT * FROM FeedbackEntity ORDER BY timestamp DESC;
 
 updateAnalysis:
-UPDATE FeedbackEntity SET aiAnalysis = ?, isAnalyzed = 1 WHERE id = ?;
+UPDATE FeedbackEntity
+SET aiAnalysis = ?, isAnalyzed = 1
+WHERE id = ?;
+
+markAsReplied:
+UPDATE FeedbackEntity
+SET hasReply = 1
+WHERE id = ?;
+
+-- Queries for AdminEntity
+getAdminByCredentials:
+SELECT * FROM AdminEntity
+WHERE email = ? AND hashedPassword = ?;
+
+insertAdmin:
+INSERT INTO AdminEntity(id, email, hashedPassword, businessProfileId, createdAt)
+VALUES (?, ?, ?, ?, ?);
+
+updateAdminProfile:
+UPDATE AdminEntity
+SET businessProfileId = ?
+WHERE id = ?;
+
+-- Queries for BusinessProfileEntity
+getProfileById:
+SELECT * FROM BusinessProfileEntity
+WHERE id = ?;
+
+getProfileByAdminId:
+SELECT * FROM BusinessProfileEntity
+WHERE adminId = ?;
+
+insertProfile:
+INSERT INTO BusinessProfileEntity(id, adminId, businessName, businessType, description, categories, createdAt)
+VALUES (?, ?, ?, ?, ?, ?, ?);
+
+-- Queries for FeedbackReplyEntity
+insertReply:
+INSERT INTO FeedbackReplyEntity(id, feedbackId, adminId, message, timestamp)
+VALUES (?, ?, ?, ?, ?);
+
+getRepliesByFeedbackId:
+SELECT * FROM FeedbackReplyEntity
+WHERE feedbackId = ?
+ORDER BY timestamp ASC;

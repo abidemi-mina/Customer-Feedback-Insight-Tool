@@ -13,9 +13,7 @@ plugins {
 sqldelight {
     databases {
         create("FeedbackDB") {
-            // This MUST match the package name in your .sq file
             packageName.set("com.mina.customerinsight")
-            srcDirs.from("src/commonMain/sqldelight")
 
         }
     }
@@ -43,11 +41,14 @@ kotlin {
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material3)
+            implementation(compose.materialIconsExtended)
+
             implementation(compose.ui)
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
+            implementation(libs.sqldelight.primitive)
             // The core Ktor client
             implementation(libs.ktor.client.core.v2312)
 
@@ -76,8 +77,6 @@ kotlin {
         }
     }
 }
-
-
 
 
 android {
