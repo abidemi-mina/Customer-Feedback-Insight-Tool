@@ -82,13 +82,12 @@ kotlin {
 android {
     namespace = "com.mina.customerinsight"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
+    minSdk = libs.versions.android.minSdk.get().toInt()
 
-    defaultConfig {
-        applicationId = "com.mina.customerinsight"
-        minSdk = libs.versions.android.minSdk.get().toInt()
-        targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 1
-        versionName = "1.0"
+    // Move the compilerOptions inside compileOptions
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
     packaging {
         resources {
