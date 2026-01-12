@@ -43,7 +43,7 @@ This project meets all Kotlin Multiplatform Contest requirements:
 | Requirement | Status | Details |
 |-------------|--------|---------|
 | **Kotlin Version** | ✅ | Built with Kotlin **2.1.0** (>= 1.7.0 required) |
-| **Multiplatform** | ✅ | Runs on **Android** and **Desktop** (Windows/macOS/Linux) |
+| **Multiplatform** | ✅ | Runs on **Android** and **Desktop**  |
 | **No Additional Setup** | ✅ | Gemini API key **pre-configured** with fallback mechanism |
 | **Fully Functioning** | ✅ | All features work out-of-the-box on both platforms |
 | **Comprehensive README** | ✅ | Complete documentation with step-by-step instructions |
