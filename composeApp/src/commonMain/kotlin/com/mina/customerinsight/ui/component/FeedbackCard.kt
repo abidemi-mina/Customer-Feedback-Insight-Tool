@@ -1,16 +1,15 @@
 package com.mina.customerinsight.ui.component
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.mina.customerinsight.AIResultView
 import com.mina.customerinsight.FeedbackEntity
 import com.mina.customerinsight.viewmodel.FeedbackViewModel
 import java.text.SimpleDateFormat
@@ -23,9 +22,13 @@ fun FeedbackCard(
     showActions: Boolean = true,
     modifier: Modifier = Modifier
 ) {
+    // Local state to control analysis visibility - CHANGED to false
+    var showAnalysis by remember { mutableStateOf(false) } // <-- This is now false
+
     // Convert database Long (0/1) to Boolean
-    val isAnalyzed = feedback.isAnalyzed != 0L  // Convert Long to Boolean
+    val isAnalyzed = feedback.isAnalyzed != 0L
     val aiAnalysisText = feedback.aiAnalysis
+    val hasAnalysis = !aiAnalysisText.isNullOrBlank()
 
     Card(
         modifier = modifier
@@ -52,7 +55,7 @@ fun FeedbackCard(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = feedback.senderEmail,
+                        text = feedback.senderEmail ?: "",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -75,8 +78,8 @@ fun FeedbackCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Actions section - Check isAnalyzed as Boolean
-            if (showActions && !isAnalyzed) {  // Use the converted Boolean
+            // Actions section - Show analyze button if no analysis exists
+            if (showActions && !hasAnalysis) {
                 Row(
                     horizontalArrangement = Arrangement.End,
                     modifier = Modifier.fillMaxWidth()
@@ -106,28 +109,30 @@ fun FeedbackCard(
                 }
             }
 
-            // Show analysis if exists - FIXED BORDER ISSUE
-            if (isAnalyzed && aiAnalysisText != null) {  // Use converted Boolean
-                Spacer(modifier = Modifier.height(12.dp))
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.1f)
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Text(
-                            text = "AI Analysis:",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = aiAnalysisText,  // Already null-checked
-                            style = MaterialTheme.typography.bodySmall
-                        )
+            // Show analysis toggle and content
+            if (hasAnalysis) {
+                if (showAnalysis) {
+                    AIResultView(
+                        analysis = aiAnalysisText!!,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TextButton(
+                        onClick = { showAnalysis = false },
+                        modifier = Modifier.align(Alignment.End)
+                    ) {
+                        Icon(Icons.Outlined.Close, contentDescription = "Close", modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Hide Analysis")
+                    }
+                } else {
+                    TextButton(
+                        onClick = { showAnalysis = true },
+                        modifier = Modifier.align(Alignment.End)
+                    ) {
+                        Icon(Icons.Outlined.Analytics, contentDescription = "Show", modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Show AI Analysis")
                     }
                 }
             }
@@ -143,3 +148,4 @@ private fun formatTime(timestamp: Long): String {
         "Invalid time"
     }
 }
+

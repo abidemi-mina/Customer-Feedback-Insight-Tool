@@ -2,11 +2,14 @@ package com.mina.customerinsight.viewmodel
 
 import androidx.compose.runtime.*
 import com.mina.customerinsight.data.*
+import com.mina.customerinsight.BusinessProfileEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import app.cash.sqldelight.coroutines.asFlow
@@ -20,7 +23,6 @@ class FeedbackViewModel(
     private val authService: AuthService,
     private val scope: CoroutineScope
 ) {
-    // Use feedbackDBQueries for ALL queries
     private val feedbackDBQueries = database.feedbackDBQueries
 
     // Feedback list
@@ -30,44 +32,65 @@ class FeedbackViewModel(
         .stateIn(scope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Authentication state
-    var currentAdmin by mutableStateOf<AdminEntity?>(null)
+    var currentAdmin by mutableStateOf<com.mina.customerinsight.AdminEntity?>(null)
     var businessProfile by mutableStateOf<BusinessProfileEntity?>(null)
 
+    // Login state as StateFlow for proper reactivity
+    private val _isAdminLoggedIn = MutableStateFlow(false)
+    val isAdminLoggedIn: StateFlow<Boolean> = _isAdminLoggedIn.asStateFlow()
+
     // Registration state
-    var registrationStep by mutableStateOf(0) // 0: login, 1: register, 2: setup profile
+    var registrationStep by mutableStateOf(0)
 
     // UI State
     var isLoading by mutableStateOf(false)
     var errorMessage by mutableStateOf<String?>(null)
     var successMessage by mutableStateOf<String?>(null)
 
-    // Keep existing analyzing state
     var analyzingId by mutableStateOf<String?>(null)
     var analysisError by mutableStateOf<String?>(null)
 
-    // Login function - SIMPLIFIED FOR NOW
+    // Login function
     fun login(email: String, password: String) {
         scope.launch {
+            println("=== LOGIN ATTEMPT ===")
+            println("Email: $email")
             isLoading = true
             errorMessage = null
+            successMessage = null
 
-            // Temporary: Always succeed for demo
-            successMessage = "Login successful (demo mode)"
+            try {
+                val admin = authService.loginAdmin(email, password)
+                println("Admin result: $admin")
 
-            // Real implementation (uncomment later):
-            // val admin = authService.loginAdmin(email, password)
-            // if (admin != null) {
-            //     currentAdmin = admin
-            //     successMessage = "Welcome back!"
-            // } else {
-            //     errorMessage = "Invalid credentials"
-            // }
+                if (admin != null) {
+                    currentAdmin = admin
+                    _isAdminLoggedIn.value = true
+                    println("Login successful! isAdminLoggedIn set to: ${_isAdminLoggedIn.value}")
+                    successMessage = "Login successful!"
 
-            isLoading = false
+                    // Load business profile if exists
+                    if (admin.businessProfileId != null) {
+                        businessProfile = database.feedbackDBQueries
+                            .getProfileById(admin.businessProfileId)
+                            .executeAsOneOrNull()
+                    }
+                } else {
+                    println("Login failed - admin is null")
+                    errorMessage = "Invalid email or password"
+                }
+            } catch (e: Exception) {
+                println("Login exception: ${e.message}")
+                e.printStackTrace()
+                errorMessage = "Login error: ${e.message}"
+            } finally {
+                isLoading = false
+                println("=== LOGIN COMPLETE ===")
+            }
         }
     }
 
-    // Register function - SIMPLIFIED FOR NOW
+    // Register function
     fun register(email: String, password: String, confirmPassword: String) {
         scope.launch {
             if (password != confirmPassword) {
@@ -76,20 +99,16 @@ class FeedbackViewModel(
             }
 
             isLoading = true
+            errorMessage = null
+            successMessage = null
 
-            // Temporary: Always succeed for demo
-            successMessage = "Account created! You can now login."
-            registrationStep = 0
-
-            // Real implementation (uncomment later):
-            // val success = authService.registerAdmin(email, password)
-            // if (success) {
-            //     registrationStep = 2
-            //     successMessage = "Account created! Now set up your business profile."
-            // } else {
-            //     errorMessage = "Registration failed. Email might be taken."
-            // }
-
+            val success = authService.registerAdmin(email, password)
+            if (success) {
+                successMessage = "Registration successful! Please login."
+                registrationStep = 0
+            } else {
+                errorMessage = "Registration failed. Email might be taken."
+            }
             isLoading = false
         }
     }
@@ -108,34 +127,77 @@ class FeedbackViewModel(
         }
     }
 
+    // ==== KEEP THIS SIMPLE FUNCTION ====
     fun triggerAIAnalysis(feedback: FeedbackEntity) {
         scope.launch {
             analyzingId = feedback.id
             analysisError = null
 
             try {
+                // Use the simple analyzeFeedback function from AIService
                 val result = aiService.analyzeFeedback(feedback.content)
+
+                // Save the analysis text
                 feedbackDBQueries.updateAnalysis(
                     aiAnalysis = result,
                     id = feedback.id
                 )
+
+                successMessage = "AI analysis completed!"
+
             } catch (e: Exception) {
-                analysisError = "AI Analysis failed: ${e.message}"
+                analysisError = "Analysis failed: ${e.message}"
+                e.printStackTrace()
             } finally {
                 analyzingId = null
             }
         }
     }
+    // ====================================
 
-    // Add reply to feedback
+    fun saveBusinessProfile(
+        name: String,
+        type: String,
+        description: String,
+        categories: List<String>
+    ) {
+        scope.launch {
+            currentAdmin?.let { admin ->
+                isLoading = true
+                val success = authService.saveBusinessProfile(
+                    adminId = admin.id,
+                    businessName = name,
+                    businessType = type,
+                    description = description,
+                    categories = categories
+                )
+
+                if (success) {
+                    businessProfile = database.feedbackDBQueries
+                        .getProfileByAdminId(admin.id)
+                        .executeAsOneOrNull()
+                    successMessage = "Business profile saved!"
+                } else {
+                    errorMessage = "Failed to save profile"
+                }
+                isLoading = false
+            }
+        }
+    }
+
     fun addReply(feedbackId: String, message: String) {
         scope.launch {
-            // currentAdmin?.let { admin ->  // Comment out for now
-            val id = System.currentTimeMillis().toString()
-            // TODO: Add reply queries when you create them
-            // feedbackDBQueries.insertReply(...)
-            feedbackDBQueries.markAsReplied(feedbackId)
-            // }
+            currentAdmin?.let { admin ->
+                val id = System.currentTimeMillis().toString()
+                database.feedbackDBQueries.insertReply(
+                    id = id,
+                    feedbackId = feedbackId,
+                    adminId = admin.id,
+                    message = message,
+                    timestamp = System.currentTimeMillis()
+                )
+                successMessage = "Reply added!"
+            }
         }
     }
 
@@ -143,6 +205,18 @@ class FeedbackViewModel(
     fun logout() {
         currentAdmin = null
         businessProfile = null
+        _isAdminLoggedIn.value = false
         successMessage = "Logged out successfully"
+    }
+
+    fun deleteFeedback(feedbackId: String) {
+        scope.launch {
+            try {
+                feedbackDBQueries.deleteFeedback(feedbackId)
+                successMessage = "Feedback deleted"
+            } catch (e: Exception) {
+                errorMessage = "Failed to delete: ${e.message}"
+            }
+        }
     }
 }

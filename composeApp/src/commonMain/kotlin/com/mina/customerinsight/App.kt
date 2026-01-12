@@ -1,35 +1,49 @@
 package com.mina.customerinsight
+
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Logout
+import androidx.compose.material.icons.outlined.AdminPanelSettings
 import androidx.compose.material.icons.outlined.Logout
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.mina.customerinsight.data.AIService
 import com.mina.customerinsight.data.AuthService
 import com.mina.customerinsight.ui.screens.*
 import com.mina.customerinsight.ui.theme.CustomerInsightTheme
 import com.mina.customerinsight.viewmodel.FeedbackViewModel
-import app.cash.sqldelight.ColumnAdapter
-import kotlinx.coroutines.delay  // For delay()
+import kotlinx.coroutines.delay
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun App(driverFactory: DatabaseDriverFactory) {
+
+    LaunchedEffect(Unit) {
+        delay(1000)
+        println("=== APP STARTED ===")
+        println("Package: com.mina.customerinsight")
+        println("Time: ${System.currentTimeMillis()}")
+    }
+
     val scope = rememberCoroutineScope()
 
     val database = remember {
         FeedbackDB(driverFactory.createDriver())
-        // NO adapter parameter!
     }
 
-    // Create services
     val aiService = remember { AIService() }
     val authService = remember { AuthService(database) }
 
-    // Create view model
     val viewModel = remember {
         FeedbackViewModel(
             database = database,
@@ -41,166 +55,255 @@ fun App(driverFactory: DatabaseDriverFactory) {
 
     // App state
     var showOnboarding by remember { mutableStateOf(true) }
-    var isAdminLoggedIn by remember { mutableStateOf(false) }
-    var currentTab by remember { mutableStateOf(0) }
+    // REMOVE showAdminLogin state - we'll handle login dialog differently
+    var showAdminLogin by remember { mutableStateOf(false) }
+
+    // Observe the login state from ViewModel - THIS IS THE ONLY LOGIN STATE
+    val isAdminLoggedIn by viewModel.isAdminLoggedIn.collectAsState()
+
+    // Debug logging
+    LaunchedEffect(isAdminLoggedIn) {
+        println("=== APP: LOGIN STATE CHANGED ===")
+        println("isAdminLoggedIn: $isAdminLoggedIn")
+        println("showOnboarding: $showOnboarding")
+    }
 
     CustomerInsightTheme {
+        println("=== COMPOSING APP ===")
+        println("showOnboarding: $showOnboarding")
+        println("isAdminLoggedIn: $isAdminLoggedIn")
+
         // Onboarding screen
         if (showOnboarding) {
+            println(">>> SHOWING ONBOARDING")
             OnboardingScreen(
                 viewModel = viewModel,
-                onComplete = { showOnboarding = false }
+                onComplete = {
+                    println(">>> ONBOARDING COMPLETE")
+                    showOnboarding = false
+                }
             )
         } else {
-            // Check authentication
-            if (!isAdminLoggedIn) {
-                AuthFlow(
-                    viewModel = viewModel,
-                    onLoginSuccess = { isAdminLoggedIn = true }
-                )
-            } else {
-                // Main app with admin dashboard
-                Scaffold(
-                    topBar = {
-                        TopAppBar(
-                            title = { Text("Customer Insight Pro") },
-                            colors = TopAppBarDefaults.topAppBarColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer
-                            ),
-                            actions = {
-                                IconButton(
-                                    onClick = {
-                                        viewModel.logout()
-                                        isAdminLoggedIn = false
-                                    }
-                                ) {
-                                    Icon(Icons.Outlined.Logout, "Logout")
-                                }
-                            }
-                        )
-                    },
-                    bottomBar = {
-                        NavigationBar {
-                            NavigationBarItem(
-                                selected = currentTab == 0,
-                                onClick = { currentTab = 0 },
-                                icon = { Text("✍️") },
-                                label = { Text("Submit") }
-                            )
-                            NavigationBarItem(
-                                selected = currentTab == 1,
-                                onClick = { currentTab = 1 },
-                                icon = { Text("📊") },
-                                label = { Text("Admin") }
-                            )
-                        }
-                    }
-                ) { padding ->
-                    Box(Modifier.padding(padding)) {
-                        when (currentTab) {
-                            0 -> UserFeedbackScreen(viewModel)
-                            1 -> AdminDashboard(
+            // Main decision point: Show either UserFeedbackScreen or AdminDashboard
+            when {
+                isAdminLoggedIn -> {
+                    println(">>> SHOWING ADMIN DASHBOARD")
+                    // Main app with admin dashboard
+                    Scaffold(
+                    ) { padding ->
+                        Box(Modifier.padding(padding)) {
+                            AdminDashboard(
                                 viewModel = viewModel,
                                 onLogout = {
                                     viewModel.logout()
-                                    isAdminLoggedIn = false
+                                    // No need to reset showAdminLogin - it's controlled by click
                                 }
                             )
                         }
                     }
                 }
+                else -> {
+                    println(">>> SHOWING USER FEEDBACK SCREEN")
+                    // Show UserFeedbackScreen with optional login dialog
+                    var showLoginDialog by remember { mutableStateOf(false) }
+
+                    UserFeedbackScreen(
+                        viewModel = viewModel,
+                        onAdminLoginClick = {
+                            println(">>> ADMIN LOGIN CLICKED")
+                            showLoginDialog = true
+                        }
+                    )
+
+                    // Show admin login dialog when requested
+                    if (showLoginDialog) {
+                        AdminLoginDialog(
+                            viewModel = viewModel,
+                            onLoginSuccess = {
+                                println(">>> LOGIN SUCCESS CALLBACK")
+                                showLoginDialog = false
+                                // Login successful - app will automatically switch to admin dashboard
+                                // because isAdminLoggedIn will become true
+                            },
+                            onDismiss = {
+                                println(">>> LOGIN DISMISSED")
+                                showLoginDialog = false
+                                // User cancelled login - just close the dialog
+                                // No state changes needed
+                            }
+                        )
+                    }
+                }
+            }
+        }
+
+        // Show loading indicator
+        if (viewModel.isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.5f)),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        }
+
+        // Show error/success messages
+        LaunchedEffect(viewModel.errorMessage, viewModel.successMessage) {
+            if (viewModel.errorMessage != null || viewModel.successMessage != null) {
+                delay(3000)
+                viewModel.errorMessage = null
+                viewModel.successMessage = null
             }
         }
     }
 }
 
-// Simple UserFeedbackScreen if you haven't created it yet
 @Composable
-fun UserFeedbackScreen(viewModel: FeedbackViewModel) {
-    var name by remember { mutableStateOf("") }
+fun AdminLoginDialog(
+    viewModel: FeedbackViewModel,
+    onLoginSuccess: () -> Unit,
+    onDismiss: () -> Unit
+) {
     var email by remember { mutableStateOf("") }
-    var feedback by remember { mutableStateOf("") }
-    var showSuccess by remember { mutableStateOf(false) }
+    var password by remember { mutableStateOf("") }
+    var showRegister by remember { mutableStateOf(false) }
+    var confirmPassword by remember { mutableStateOf("") }
+    var businessName by remember { mutableStateOf("") }
+    var businessType by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
 
-    LaunchedEffect(Unit) {
-        delay(3000)
-        showSuccess = false
-    }
-
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        Text(
-            "Submit Feedback",
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
-
-        OutlinedTextField(
-            value = name,
-            onValueChange = { name = it },
-            label = { Text("Your Name") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 8.dp)
-        )
-
-        OutlinedTextField(
-            value = email,
-            onValueChange = { email = it },
-            label = { Text("Your Email (optional)") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 8.dp)
-        )
-
-        OutlinedTextField(
-            value = feedback,
-            onValueChange = { feedback = it },
-            label = { Text("Your Feedback") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
-            minLines = 5
-        )
-
-        if (showSuccess) {
-            Text(
-                "✓ Thank you for your feedback!",
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-        }
-
-        Button(onClick = {
-                if (name.isNotBlank() && feedback.isNotBlank()) {
-                    viewModel.submitFeedback(name, email, feedback)
-                    showSuccess = true
-                    name = ""
-                    email = ""
-                    feedback = ""
-
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (showRegister) "Create Admin Account" else "Admin Login") },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState())
+            ) {
+                // Show error message
+                viewModel.errorMessage?.let { message ->
+                    Text(
+                        message,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
                 }
-            }, modifier = Modifier.fillMaxWidth(), enabled = name.isNotBlank() && feedback.isNotBlank()) {
-            Text("Submit Feedback")
+
+                // Show success message
+                viewModel.successMessage?.let { message ->
+                    Text(
+                        message,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
+
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    label = { Text("Email") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Password") },
+                    modifier = Modifier.fillMaxWidth(),
+                    visualTransformation = PasswordVisualTransformation()
+                )
+
+                if (showRegister) {
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedTextField(
+                        value = confirmPassword,
+                        onValueChange = { confirmPassword = it },
+                        label = { Text("Confirm Password") },
+                        modifier = Modifier.fillMaxWidth(),
+                        visualTransformation = PasswordVisualTransformation()
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        "Business Profile Setup",
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+
+                    OutlinedTextField(
+                        value = businessName,
+                        onValueChange = { businessName = it },
+                        label = { Text("Business Name") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedTextField(
+                        value = businessType,
+                        onValueChange = { businessType = it },
+                        label = { Text("Business Type") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedTextField(
+                        value = description,
+                        onValueChange = { description = it },
+                        label = { Text("Description") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 3
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            if (viewModel.isLoading) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+            } else {
+                Button(
+                    onClick = {
+                        if (showRegister) {
+                            if (password != confirmPassword) {
+                                viewModel.errorMessage = "Passwords don't match"
+                                return@Button
+                            }
+                            if (businessName.isBlank() || businessType.isBlank()) {
+                                viewModel.errorMessage = "Business info required"
+                                return@Button
+                            }
+                            viewModel.register(email, password, confirmPassword)
+                            // After registration, save business profile
+                            viewModel.saveBusinessProfile(
+                                name = businessName,
+                                type = businessType,
+                                description = description,
+                                categories = emptyList()
+                            )
+                        } else {
+                            viewModel.login(email, password)
+                        }
+                    }
+                ) {
+                    Text(if (showRegister) "Register" else "Login")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = { showRegister = !showRegister }) {
+                Text(if (showRegister) "Already have account? Login" else "Need account? Register")
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
         }
-    }
+    )
 }
 
-//// If you have UserSide function, rename it or keep it
-//@Composable
-//fun UserSide(viewModel: FeedbackViewModel) {
-//    UserFeedbackScreen(viewModel)
-//}
-//
-//// If you have AdminSide function
-//@Composable
-//fun AdminSide(viewModel: FeedbackViewModel) {
-//    AdminDashboard(
-//        viewModel = viewModel,
-//        onLogout = { /* handled in App */ }
-//    )
-//}

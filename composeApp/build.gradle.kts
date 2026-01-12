@@ -1,114 +1,113 @@
+import com.android.build.api.dsl.androidLibrary
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.androidApplication)
-    alias(libs.plugins.composeMultiplatform)
+    alias(libs.plugins.composeMultiplatform)    // ← most common alias in 2025–2026
     alias(libs.plugins.composeCompiler)
-    alias(libs.plugins.composeHotReload)
-    alias(libs.plugins.kotlinSerialization)
-    alias(libs.plugins.sqldelight) // The plugin must be applied
+    alias(libs.plugins.androidApplication)   // ← This makes it a launchable app
+    //    alias(libs.plugins.kotlinSerialization)
+    alias(libs.plugins.sqldelight)
 }
+
 sqldelight {
     databases {
         create("FeedbackDB") {
-            packageName.set("com.mina.customerinsight")
-
+            packageName = "com.mina.customerinsight"
+            schemaOutputDirectory = file("src/commonMain/sqldelight")
         }
     }
 }
+
 kotlin {
     androidTarget {
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_11)
         }
     }
-    
+
     jvm()
-    
+
     sourceSets {
-        androidMain.dependencies {
-            implementation(compose.preview)
-            implementation(libs.androidx.activity.compose)
-            // The Android-specific "engine" for Ktor
-            implementation(libs.ktor.client.okhttp)
-            implementation(libs.runtime)
-            implementation(libs.sqldelight.android.driver)
+        val commonMain by getting {
+            dependencies {
+                implementation(compose.runtime)
+                implementation(compose.foundation)
+                implementation(compose.material3)
+                implementation(compose.materialIconsExtended)
+                implementation(compose.ui)
+                implementation(compose.components.resources)
+                implementation(compose.components.uiToolingPreview)
 
+                implementation(libs.kotlinx.coroutines.core)
+                implementation(libs.androidx.lifecycle.viewmodelCompose)
+                implementation(libs.androidx.lifecycle.runtimeCompose)
+
+                // Ktor
+                implementation(libs.ktor.client.core)
+                implementation(libs.ktor.client.content.negotiation)
+                implementation(libs.ktor.serialization.kotlinx.json)
+                implementation(libs.ktor.client.logging)
+                implementation(libs.ktor.client.cio)
+
+                // SQLDelight
+                implementation(libs.sqldelight.runtime)
+                implementation(libs.sqldelight.coroutines)
+                implementation(libs.sqldelight.primitive)
+            }
         }
-        commonMain.dependencies {
-            implementation(compose.runtime)
-            implementation(compose.foundation)
-            implementation(compose.material3)
-            implementation(compose.materialIconsExtended)
 
-            implementation(compose.ui)
-            implementation(compose.components.resources)
-            implementation(compose.components.uiToolingPreview)
-            implementation(libs.androidx.lifecycle.viewmodelCompose)
-            implementation(libs.androidx.lifecycle.runtimeCompose)
-            implementation(libs.sqldelight.primitive)
-            // The core Ktor client
-            implementation(libs.ktor.client.core.v2312)
-
-            // To handle JSON (for the AI API response)
-            implementation(libs.ktor.client.content.negotiation.v2312)
-            implementation(libs.ktor.serialization.kotlinx.json.v2312)
-            implementation(libs.ktor.client.logging)
-
-
-            // The Logging plugin (helpful for debugging your AI calls)
-            implementation(libs.ktor.client.logging)
-            implementation(libs.sqldelight.runtime)
-            implementation(libs.sqldelight.coroutines)
-            implementation(libs.ktor.client.cio)
-
+        val androidMain by getting {
+            dependencies {
+                implementation(compose.preview)
+                implementation(libs.androidx.activity.compose)
+                implementation(libs.ktor.client.okhttp)
+                implementation(libs.sqldelight.android.driver)
+            }
         }
-        commonTest.dependencies {
-            implementation(libs.kotlin.test)
+
+        val jvmMain by getting {
+            dependencies {
+                implementation(compose.desktop.currentOs)
+                implementation(libs.kotlinx.coroutinesSwing)
+                implementation(libs.ktor.client.cio)
+                implementation(libs.sqldelight.sqlite.driver)
+            }
         }
-        jvmMain.dependencies {
-            implementation(compose.desktop.currentOs)
-            implementation(libs.kotlinx.coroutinesSwing)
-            // The Desktop-specific "engine" (usually CIO or Apache)
-            implementation(libs.ktor.client.cio)
-            implementation(libs.sqldelight.sqlite.driver)
+
+        val commonTest by getting {
+            dependencies {
+                implementation(libs.kotlin.test)
+            }
         }
     }
 }
 
-
 android {
     namespace = "com.mina.customerinsight"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
-    minSdk = libs.versions.android.minSdk.get().toInt()
 
-    // Move the compilerOptions inside compileOptions
+    defaultConfig {
+        minSdk = libs.versions.android.minSdk.get().toInt()
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
 
-    // Move packaging configuration here
-    packaging {
-        resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-        }
-    }
     buildTypes {
         getByName("release") {
             isMinifyEnabled = false
         }
     }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
-}
 
-dependencies {
-    debugImplementation(compose.uiTooling)
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
 }
 
 compose.desktop {
@@ -117,12 +116,13 @@ compose.desktop {
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "com.mina.customerinsight"
+            packageName = "CustomerInsight"
             packageVersion = "1.0.0"
         }
     }
 }
 
+// Usually helpful during development
 dependencies {
     debugImplementation(compose.uiTooling)
 }

@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Logout
+import androidx.compose.material.icons.automirrored.outlined.Message
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -12,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.mina.customerinsight.ui.component.ActionButton
 import com.mina.customerinsight.ui.component.FeedbackCard
@@ -23,20 +26,17 @@ fun AdminDashboard(
     viewModel: FeedbackViewModel,
     onLogout: () -> Unit
 ) {
-    val feedbacks by viewModel.feedbacks.collectAsState()  // Now this should work
+    val feedbacks by viewModel.feedbacks.collectAsState()
+    var showAllFeedbacks by remember { mutableStateOf(false) } // Navigation state
 
-    // Convert Long to Boolean for calculations
-    val unanalyzedCount by remember(feedbacks) {
-        derivedStateOf {
-            feedbacks.count { it.isAnalyzed == 0L }  // 0L = false, 1L = true
-        }
+    val displayedFeedbacks = if (showAllFeedbacks) {
+        feedbacks // Show all feedbacks
+    } else {
+        feedbacks.take(5) // Show only recent 5
     }
 
-    val repliedCount by remember(feedbacks) {
-        derivedStateOf {
-            feedbacks.count { it.hasReply == 1L }  // 1L = has reply
-        }
-    }
+    val analyzedCount = feedbacks.count { !it.aiAnalysis.isNullOrBlank() }
+    val pendingCount = feedbacks.count { it.aiAnalysis.isNullOrBlank() }
 
     Scaffold(
         topBar = {
@@ -48,7 +48,7 @@ fun AdminDashboard(
                             contentDescription = "Dashboard"
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Dashboard")
+                        Text("Admin Dashboard")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -56,9 +56,18 @@ fun AdminDashboard(
                 ),
                 actions = {
                     IconButton(onClick = onLogout) {
-                        Icon(Icons.Outlined.Logout, "Logout")
+                        Icon(Icons.AutoMirrored.Outlined.Logout, "Logout")
                     }
                 }
+            )
+        },
+        bottomBar = {
+            // Footer with navigation
+            AdminFooter(
+                showAllFeedbacks = showAllFeedbacks,
+                totalCount = feedbacks.size,
+                analyzedCount = analyzedCount,
+                onToggleView = { showAllFeedbacks = !showAllFeedbacks }
             )
         }
     ) { padding ->
@@ -74,38 +83,63 @@ fun AdminDashboard(
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     StatCard(
-                        title = "Total Feedback",
+                        title = "Total",
                         value = feedbacks.size.toString(),
-                        icon = Icons.Outlined.Message,
+                        icon = Icons.AutoMirrored.Outlined.Message,
                         color = MaterialTheme.colorScheme.primary
                     )
 
                     StatCard(
-                        title = "To Analyze",
-                        value = unanalyzedCount.toString(),
-                        icon = Icons.Outlined.Psychology,
+                        title = "Analyzed",
+                        value = analyzedCount.toString(),
+                        icon = Icons.Outlined.CheckCircle,
                         color = MaterialTheme.colorScheme.secondary
                     )
 
                     StatCard(
-                        title = "Replied",
-                        value = repliedCount.toString(),
-                        icon = Icons.Outlined.Reply,
+                        title = "Pending",
+                        value = pendingCount.toString(),
+                        icon = Icons.Outlined.Psychology,
                         color = MaterialTheme.colorScheme.tertiary
                     )
                 }
             }
 
-            // Recent Feedback
+            // Section Title
             item {
-                Text(
-                    "Recent Feedback",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        if (showAllFeedbacks) "All Feedbacks" else "Recent Feedbacks",
+                        style = MaterialTheme.typography.titleLarge
+                    )
+
+                    // View Toggle Button
+                    FilterChip(
+                        selected = showAllFeedbacks,
+                        onClick = { showAllFeedbacks = !showAllFeedbacks },
+                        label = {
+                            Text(
+                                if (showAllFeedbacks) "Show Recent" else "Show All",
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        },
+                        leadingIcon = if (showAllFeedbacks) {
+                            { Icon(Icons.Outlined.List, null, Modifier.size(16.dp)) }
+                        } else {
+                            { Icon(Icons.Outlined.Schedule, null, Modifier.size(16.dp)) }
+                        }
+                    )
+                }
             }
 
-            items(feedbacks.take(5)) { feedback ->
+            // Feedback List
+            items(displayedFeedbacks) { feedback ->
                 FeedbackCard(
                     feedback = feedback,
                     viewModel = viewModel,
@@ -113,42 +147,131 @@ fun AdminDashboard(
                 )
             }
 
-            // Quick Actions
-            item {
-                Text(
-                    "Quick Actions",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
-                )
-
-                Row(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    ActionButton(
-                        text = "Analyze All",
-                        icon = Icons.Outlined.AutoAwesome,
-                        onClick = {
-                            // Analyze unanalyzed feedbacks
-                            feedbacks.filter { it.isAnalyzed == 0L }
-                                .forEach { feedback ->
-                                    viewModel.triggerAIAnalysis(feedback)
-                                }
-                        }
-                    )
-
-                    ActionButton(
-                        text = "Export",
-                        icon = Icons.Outlined.Download,
-                        onClick = { /* Export data */ }
-                    )
-
-                    ActionButton(
-                        text = "Settings",
-                        icon = Icons.Outlined.Settings,
-                        onClick = { /* Open settings */ }
-                    )
+            // Show message if no feedbacks
+            if (displayedFeedbacks.isEmpty()) {
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            Icons.Outlined.Feedback,
+                            contentDescription = "No feedback",
+                            modifier = Modifier.size(64.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            "No feedback yet",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            "Customers will appear here when they submit feedback",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
+            }
+
+            // Quick Actions (only in recent view)
+            if (!showAllFeedbacks) {
+                item {
+                    Column {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            "Quick Actions",
+                            style = MaterialTheme.typography.titleLarge,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        )
+
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            ActionButton(
+                                text = "Analyze All",
+                                icon = Icons.Outlined.AutoAwesome,
+                                onClick = {
+                                    feedbacks.filter { it.aiAnalysis.isNullOrBlank() }
+                                        .forEach { feedback ->
+                                            viewModel.triggerAIAnalysis(feedback)
+                                        }
+                                }
+                            )
+
+                            ActionButton(
+                                text = "View All",
+                                icon = Icons.Outlined.List,
+                                onClick = { showAllFeedbacks = true }
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(24.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Footer Component
+@Composable
+fun AdminFooter(
+    showAllFeedbacks: Boolean,
+    totalCount: Int,
+    analyzedCount: Int,
+    onToggleView: () -> Unit
+) {
+    Surface(
+        tonalElevation = 8.dp,
+        shadowElevation = 4.dp,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Stats
+            Column {
+                Text(
+                    "${analyzedCount}/${totalCount} Analyzed",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                LinearProgressIndicator(
+                    progress = if (totalCount > 0) analyzedCount.toFloat() / totalCount.toFloat() else 0f,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(4.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            // Toggle Button
+            FilledTonalButton(
+                onClick = onToggleView,
+                modifier = Modifier.height(36.dp)
+            ) {
+                Icon(
+                    if (showAllFeedbacks) Icons.Outlined.Schedule else Icons.Outlined.List,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    if (showAllFeedbacks) "Recent" else "All",
+                    style = MaterialTheme.typography.labelMedium
+                )
             }
         }
     }

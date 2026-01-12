@@ -1,17 +1,4 @@
-import kotlin.Boolean;
-
-CREATE TABLE FeedbackEntity (
-    id TEXT NOT NULL PRIMARY KEY,
-    senderName TEXT NOT NULL,
-    senderEmail TEXT NOT NULL,
-    content TEXT NOT NULL,
-    timestamp INTEGER NOT NULL,
-    aiAnalysis TEXT,  -- NULLABLE (has ? in Kotlin)
-    isAnalyzed INTEGER  NOT NULL DEFAULT 0,  -- NON-NULLABLE
-    hasReply INTEGER  DEFAULT NULL  -- NULLABLE
-);
-
-CREATE TABLE AdminEntity (
+CREATE TABLE IF NOT EXISTS AdminEntity (
     id TEXT NOT NULL PRIMARY KEY,
     email TEXT NOT NULL UNIQUE,
     hashedPassword TEXT NOT NULL,
@@ -19,7 +6,17 @@ CREATE TABLE AdminEntity (
     createdAt INTEGER NOT NULL
 );
 
-CREATE TABLE BusinessProfileEntity (
+CREATE TABLE IF NOT EXISTS FeedbackEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    senderName TEXT NOT NULL,
+    senderEmail TEXT NOT NULL,
+    content TEXT NOT NULL,
+    timestamp INTEGER NOT NULL,
+    aiAnalysis TEXT,
+    isAnalyzed INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS BusinessProfileEntity (
     id TEXT NOT NULL PRIMARY KEY,
     adminId TEXT NOT NULL,
     businessName TEXT NOT NULL,
@@ -29,7 +26,7 @@ CREATE TABLE BusinessProfileEntity (
     createdAt INTEGER NOT NULL
 );
 
-CREATE TABLE FeedbackReplyEntity (
+CREATE TABLE IF NOT EXISTS FeedbackReplyEntity (
     id TEXT NOT NULL PRIMARY KEY,
     feedbackId TEXT NOT NULL,
     adminId TEXT NOT NULL,
@@ -48,11 +45,6 @@ SELECT * FROM FeedbackEntity ORDER BY timestamp DESC;
 updateAnalysis:
 UPDATE FeedbackEntity
 SET aiAnalysis = ?, isAnalyzed = 1
-WHERE id = ?;
-
-markAsReplied:
-UPDATE FeedbackEntity
-SET hasReply = 1
 WHERE id = ?;
 
 -- Queries for AdminEntity
@@ -91,3 +83,14 @@ getRepliesByFeedbackId:
 SELECT * FROM FeedbackReplyEntity
 WHERE feedbackId = ?
 ORDER BY timestamp ASC;
+
+
+-- Add this to your FeedbackEntity queries section
+deleteFeedback:
+DELETE FROM FeedbackEntity WHERE id = ?;
+
+-- Also add a query to get unanalyzed feedback
+selectUnanalyzed:
+SELECT * FROM FeedbackEntity
+WHERE isAnalyzed = 0
+ORDER BY timestamp DESC;

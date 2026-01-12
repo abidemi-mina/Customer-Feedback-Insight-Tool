@@ -2,9 +2,10 @@ package com.mina.customerinsight.data
 
 import kotlinx.serialization.Serializable
 import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
 @Serializable
-data class UserFeedback(
+data class UserFeedback @OptIn(ExperimentalTime::class) constructor(
     val id: String = Clock.System.now().toEpochMilliseconds().toString(),
     val senderName: String,
     val senderEmail: String,
