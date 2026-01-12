@@ -174,6 +174,15 @@ fun AdminLoginDialog(
     var businessType by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
 
+
+    LaunchedEffect(viewModel.successMessage) {
+        if (viewModel.successMessage != null && showRegister) {
+            // Registration successful! Wait a brief moment then show login
+            delay(1500)
+            showRegister = false // This hides the registration form
+        }
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (showRegister) "Create Admin Account" else "Admin Login") },
