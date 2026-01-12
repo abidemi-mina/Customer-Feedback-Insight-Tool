@@ -188,7 +188,7 @@ Customer provided $sentiment feedback. Manual review recommended to extract deta
 
 CONFIDENCE: 60%
 
-Note: Using fallback analysis - Gemini API unavailable
+Note: Using fallback analysis - Kindly check network Connectivity
         """.trimIndent()
     }
 }
