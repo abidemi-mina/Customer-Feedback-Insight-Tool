@@ -286,23 +286,29 @@ The project follows **Clean Architecture** principles with clear separation of c
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    UI Layer (Compose)                    │
-│  • FeedbackSubmissionScreen  • AdminDashboardScreen     │
-│  • Material Design 3 Components  • Navigation           │
+│                   UI Layer (Compose)                     │
+│  • FeedbackScreen.kt  • AdminDashboardScreen.kt         │
+│  • FeedbackForm.kt    • FeedbackListItem.kt             │
+│  • Material Design 3 Components • Shared UI State       │
 └─────────────────────────────────────────────────────────┘
-                           ↓
+                               ↓
 ┌─────────────────────────────────────────────────────────┐
-│              Presentation Layer (ViewModel)              │
-│  • FeedbackViewModel (StateFlow, Business Logic)        │
-│  • AuthViewModel (Login/Logout Management)              │
+│            Presentation Layer (ViewModels)               │
+│  • FeedbackViewModel.kt (StateFlow, Business Logic)     │
+│  • AuthViewModel.kt (Login/Logout Management)           │
 └─────────────────────────────────────────────────────────┘
-                           ↓
+                               ↓
 ┌─────────────────────────────────────────────────────────┐
-│                 Domain & Data Layer                      │
-│  • AIService (Gemini API with Ktor Client)             │
-│  • FeedbackRepository (Data access abstraction)         │
-│  • AuthService (Credential verification)                │
-│  • SQLDelight Database (Local storage)                  │
+│                 Data Layer (Services/Repo)               │
+│  • AIService.kt (Gemini API with Ktor Client)           │
+│  • FeedbackRepository.kt (SQLDelight database access)   │
+│  • AuthService.kt (Credential verification)             │
+└─────────────────────────────────────────────────────────┘
+                               ↓
+┌─────────────────────────────────────────────────────────┐
+│                  Data Sources                            │
+│  • SQLDelight Database (Local persistence)              │
+│  • Gemini API (External AI service)                     │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -344,40 +350,37 @@ The project follows **Clean Architecture** principles with clear separation of c
 
 ```
 CustomerInsight/
-├── composeApp/                          # Main KMP module
-│   ├── src/
-│   │   ├── commonMain/                  # Shared code (80%)
-│   │   │   ├── kotlin/com/customerinsight/
-│   │   │   │   ├── data/
-│   │   │   │   │   ├── database/       # SQLDelight setup
-│   │   │   │   │   ├── model/          # Data classes
-│   │   │   │   │   ├── repository/     # Data access layer
-│   │   │   │   │   └── service/        # API services
-│   │   │   │   ├── di/                 # Dependency injection
-│   │   │   │   ├── ui/
-│   │   │   │   │   ├── screens/        # Main screens
-│   │   │   │   │   ├── components/     # Reusable UI
-│   │   │   │   │   └── theme/          # Material theming
-│   │   │   │   ├── viewmodel/          # State management
-│   │   │   │   └── App.kt              # Root composable
-│   │   │   └── resources/               # Assets, strings
-│   │   ├── androidMain/                 # Android-specific
-│   │   │   └── kotlin/
-│   │   │       ├── MainActivity.kt
-│   │   │       └── DatabaseDriver.kt    # Android SQLite
-│   │   ├── desktopMain/                 # Desktop-specific
-│   │   │   └── kotlin/
-│   │   │       ├── main.kt             # Desktop entry point
-│   │   │       └── DatabaseDriver.kt    # Desktop SQLite
-│   │   └── sqldelight/                  # Database schemas
-│   │       └── database/
-│   │           └── CustomerInsight.sq   # SQL definitions
-│   └── build.gradle.kts
-├── gradle/                              # Gradle wrapper
-├── build.gradle.kts                     # Root build config
-├── settings.gradle.kts                  # Project settings
-├── gradle.properties                    # Build properties
-└── README.md                            # This file
+├── composeApp/src/commonMain/kotlin/com/customerinsight/
+│   ├── App.kt                              # Root application
+│   ├── MainViewModel.kt                    # Navigation state
+│   ├── ui/
+│   │   ├── screens/
+│   │   │   ├── FeedbackScreen.kt          # Customer feedback form
+│   │   │   ├── AdminDashboardScreen.kt    # Admin analytics view
+│   │   │   └── AdminLoginScreen.kt        # Admin authentication
+│   │   ├── components/
+│   │   │   ├── FeedbackForm.kt            # Reusable form component
+│   │   │   └── FeedbackListItem.kt        # Feedback list item
+│   │   └── theme/
+│   │       └── AppTheme.kt                # Material 3 theming
+│   ├── viewmodel/
+│   │   ├── FeedbackViewModel.kt           # Feedback business logic
+│   │   └── AuthViewModel.kt               # Authentication logic
+│   ├── data/
+│   │   ├── repository/
+│   │   │   └── FeedbackRepository.kt      # Database operations
+│   │   ├── service/
+│   │   │   ├── AIService.kt               # Gemini API integration
+│   │   │   └── AuthService.kt             # Credential validation
+│   │   ├── database/
+│   │   │   ├── CustomerDatabase.kt        # Database factory
+│   │   │   └── DatabaseDriver.kt          # Abstract driver
+│   │   └── model/
+│   │       ├── Feedback.kt                # Data class
+│   │       ├── AIAnalysis.kt              # Analysis result
+│   │       └── Admin.kt                   # Admin user
+│   └── di/
+│       └── AppModule.kt                   # Dependency injection
 ```
 
 ---
@@ -474,6 +477,34 @@ fun generateFallbackAnalysis(feedback: String): AIAnalysis {
 3. Verify UI/UX is consistent
 
 ### Automated Tests
+
+
+
+```
+🔄 Data Flow in Your Application:
+User Input → FeedbackScreen.kt (UI collects feedback)
+
+UI Event → FeedbackViewModel.kt (processes submission)
+
+Business Logic → FeedbackRepository.kt (saves to database)
+
+Data Persistence → SQLDelight Database (stores feedback)
+
+Admin Request → AdminDashboardScreen.kt (requests analysis)
+
+AI Analysis → AIService.kt (calls Gemini API)
+
+Results Display → UI updates with analysis
+
+✅ What's Working Well:
+Clear Separation: You have proper separation between UI, ViewModels, and data layer
+
+Repository Pattern: FeedbackRepository.kt correctly abstracts data sources
+
+Dependency Injection: AppModule.kt provides clean dependency management
+
+Platform Abstraction: DatabaseDriver.kt has expect/actual for Android/Desktop
+```
 
 ```bash
 # Run all unit tests
