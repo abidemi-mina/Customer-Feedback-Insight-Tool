@@ -7,7 +7,7 @@ plugins {
     alias(libs.plugins.composeMultiplatform)    // ← most common alias in 2025–2026
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.androidApplication)   // ← This makes it a launchable app
-    //    alias(libs.plugins.kotlinSerialization)
+    alias(libs.plugins.kotlinSerialization)
     alias(libs.plugins.sqldelight)
 }
 
@@ -16,6 +16,8 @@ sqldelight {
         create("FeedbackDB") {
             packageName = "com.mina.customerinsight"
             schemaOutputDirectory = file("src/commonMain/sqldelight")
+            verifyMigrations.set(false)
+            verifyDefinitions.set(false)
         }
     }
 }

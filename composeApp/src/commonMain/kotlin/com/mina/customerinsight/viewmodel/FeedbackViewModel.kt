@@ -134,26 +134,29 @@ class FeedbackViewModel(
             analysisError = null
 
             try {
-                // Use the simple analyzeFeedback function from AIService
-                val result = aiService.analyzeFeedback(feedback.content)
+                // Get business profile for context
+                val businessName = businessProfile?.businessName
+                val businessType = businessProfile?.businessType
 
-                // Save the analysis text
+                val result = aiService.analyzeFeedback(
+                    feedback = feedback.content,
+                    businessType = businessType,
+                    businessName = businessName
+                )
+
                 feedbackDBQueries.updateAnalysis(
                     aiAnalysis = result,
                     id = feedback.id
                 )
-
-                successMessage = "AI analysis completed!"
-
+                successMessage = "Analysis complete!"
             } catch (e: Exception) {
-                analysisError = "Analysis failed: ${e.message}"
+                analysisError = "AI Analysis failed: ${e.message}"
                 e.printStackTrace()
             } finally {
                 analyzingId = null
             }
         }
-    }
-    // ====================================
+    }    // ====================================
 
     fun saveBusinessProfile(
         name: String,

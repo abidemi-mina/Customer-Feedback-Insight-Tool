@@ -4,10 +4,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.List
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.automirrored.outlined.Message
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -130,7 +132,7 @@ fun AdminDashboard(
                             )
                         },
                         leadingIcon = if (showAllFeedbacks) {
-                            { Icon(Icons.Outlined.List, null, Modifier.size(16.dp)) }
+                            { Icon(Icons.AutoMirrored.Outlined.List, null, Modifier.size(16.dp)) }
                         } else {
                             { Icon(Icons.Outlined.Schedule, null, Modifier.size(16.dp)) }
                         }
@@ -206,7 +208,7 @@ fun AdminDashboard(
 
                             ActionButton(
                                 text = "View All",
-                                icon = Icons.Outlined.List,
+                                icon = Icons.AutoMirrored.Outlined.List,
                                 onClick = { showAllFeedbacks = true }
                             )
                         }
@@ -263,7 +265,7 @@ fun AdminFooter(
                 modifier = Modifier.height(36.dp)
             ) {
                 Icon(
-                    if (showAllFeedbacks) Icons.Outlined.Schedule else Icons.Outlined.List,
+                    if (showAllFeedbacks) Icons.Outlined.Schedule else Icons.AutoMirrored.Outlined.List,
                     contentDescription = null,
                     modifier = Modifier.size(18.dp)
                 )

@@ -20,13 +20,13 @@ fun FeedbackCard(
     feedback: FeedbackEntity,
     viewModel: FeedbackViewModel,
     showActions: Boolean = true,
-    modifier: Modifier = Modifier
+    @Suppress("ModifierParameter") modifier: Modifier = Modifier
 ) {
     // Local state to control analysis visibility - CHANGED to false
     var showAnalysis by remember { mutableStateOf(false) } // <-- This is now false
 
     // Convert database Long (0/1) to Boolean
-    val isAnalyzed = feedback.isAnalyzed != 0L
+    feedback.isAnalyzed != 0L
     val aiAnalysisText = feedback.aiAnalysis
     val hasAnalysis = !aiAnalysisText.isNullOrBlank()
 
@@ -55,7 +55,7 @@ fun FeedbackCard(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = feedback.senderEmail ?: "",
+                        text = feedback.senderEmail,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -113,7 +113,7 @@ fun FeedbackCard(
             if (hasAnalysis) {
                 if (showAnalysis) {
                     AIResultView(
-                        analysis = aiAnalysisText!!,
+                        analysis = aiAnalysisText,
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(modifier = Modifier.height(8.dp))
